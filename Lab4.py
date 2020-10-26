@@ -13,7 +13,7 @@ from tensorflow.keras.layers import Input, Dense, Reshape, Flatten, Dropout
 from tensorflow.keras.layers import BatchNormalization, LeakyReLU
 from tensorflow.keras.layers import Conv2D, MaxPooling2D, Conv2DTranspose, UpSampling2D
 from tensorflow.keras.optimizers import Adam
-from scipy.misc import imsave
+from imageio import imwrite
 import random
 
 random.seed(1618)
@@ -37,7 +37,7 @@ elif DATASET == "mnist_f":
 	IMAGE_SHAPE = (IH, IW, IZ) = (28, 28, 1)
 	CLASSLIST = ["top", "trouser", "pullover", "dress", "coat", "sandal", "shirt", "sneaker", "bag", "ankle boot"]
 	# TODO: choose a label to train on from the CLASSLIST above
-	LABEL = "top"
+	LABEL = "bag"
 
 elif DATASET == "cifar_10":
 	IMAGE_SHAPE = (IH, IW, IZ) = (32, 32, 3)
@@ -100,14 +100,16 @@ def buildDiscriminator():
 
 	# TODO: build a discriminator which takes in a (28 x 28 x 1) image - possibly from mnist_f
 	#       and possibly from the generator - and outputs a single digit REAL (1) or FAKE (0)
-	model.add(Conv2D(64, (3,3), strides=(2, 2), padding='same', input_shape=IMAGE_SHAPE))
-	model.add(LeakyReLU(alpha=0.2))
-	model.add(Dropout(0.4))
-	model.add(Conv2D(64, (3,3), strides=(2, 2), padding='same'))
-	model.add(LeakyReLU(alpha=0.2))
-	model.add(Dropout(0.4))
+
+	model.add(Conv2D(64, kernel_size=5, strides=2, padding="same",
+                        activation=LeakyReLU(0.3),
+                        input_shape=IMAGE_SHAPE))
+	model.add(Dropout(0.5))
+	model.add(Conv2D(128, kernel_size=5, strides=2, padding="same",
+							activation=LeakyReLU(0.3)))
+	model.add(Dropout(0.5))
 	model.add(Flatten())
-	model.add(Dense(1, activation='sigmoid'))
+	model.add(Dense(1, activation="sigmoid"))
 	# Creating a Keras Model out of the network
 	inputTensor = Input(shape=IMAGE_SHAPE)
 	return Model(inputTensor, model(inputTensor))
@@ -119,18 +121,14 @@ def buildGenerator():
 
 	# TODO: build a generator which takes in a (NOISE_SIZE) noise array and outputs a fake
 	#       mnist_f (28 x 28 x 1) image
-
-	n_nodes = 128 * 7 * 7
-	model.add(Dense(n_nodes, input_dim=NOISE_SIZE))
-	model.add(LeakyReLU(alpha=0.2))
-	model.add(Reshape((7, 7, 128)))
-	# upsample to 14x14
-	model.add(Conv2DTranspose(128, (4, 4), strides=(2, 2)))
-	model.add(LeakyReLU(alpha=0.2))
-	# upsample to 28x28
-	model.add(Conv2DTranspose(128, (4, 4), strides=(2, 2)))
-	model.add(LeakyReLU(alpha=0.2))
-	model.add(Conv2D(1, (7, 7), activation='tanh'))
+	model.add(Dense(7 * 7 * 128, input_dim=NOISE_SIZE))
+	model.add(Reshape([7, 7, 128]))
+	model.add(BatchNormalization())
+	model.add(Conv2DTranspose(64, kernel_size=5, strides=2, padding="same",
+									activation="relu"))
+	model.add(BatchNormalization())
+	model.add(Conv2DTranspose(1, kernel_size=5, strides=2, padding="same",
+									activation="tanh"))
 
 	model.add(Reshape(IMAGE_SHAPE))
 	# Creating a Keras Model out of the network
@@ -189,7 +187,7 @@ def runGAN(generator, outfile):
 	img = generator.predict(noise)[0]  # run generator on noise
 	img = np.squeeze(img)  # readjust image shape if needed
 	img = (0.5 * img + 0.5) * 255  # adjust values to range from 0 to 255 as needed
-	imsave(outfile, img)  # store resulting image
+	imwrite(outfile, img)  # store resulting image
 
 
 ################################### RUNNING THE PIPELINE #############################
