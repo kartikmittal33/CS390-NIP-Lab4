@@ -11,9 +11,12 @@ from tensorflow.keras.layers import Input, Dense, Reshape, Flatten, Dropout
 from tensorflow.keras.layers import BatchNormalization, LeakyReLU
 from tensorflow.keras.layers import Conv2D, Conv2DTranspose
 from tensorflow.keras.optimizers import Adam
-from imageio import imwrite
+from scipy.misc import imsave
 import random
 import sys
+import matplotlib
+matplotlib.use('Agg')
+
 import matplotlib.pyplot as plt
 
 random.seed(1618)
@@ -37,7 +40,7 @@ elif DATASET == "mnist_f":
     IMAGE_SHAPE = (IH, IW, IZ) = (28, 28, 1)
     CLASSLIST = ["top", "trouser", "pullover", "dress", "coat", "sandal", "shirt", "sneaker", "bag", "ankle boot"]
     # TODO: choose a label to train on from the CLASSLIST above
-    LABEL = "bag"
+    LABEL = "coat"
 
 elif DATASET == "cifar_10":
     IMAGE_SHAPE = (IH, IW, IZ) = (32, 32, 3)
@@ -195,14 +198,14 @@ def buildGAN(images, discriminator_ratio, generator_ratio, epochs=40000, batchSi
     plt.xlabel("Epochs")
     plt.ylabel("Loss")
     plt.title("Loss plot for discriminator")
-    plt.savefig("discriminator_loss_plot.pdf")
+    plt.savefig(OUTPUT_NAME + "_discriminator_loss_plot.pdf")
 
     plt.figure(2)
     plt.plot(range(len(generator_loss)), generator_loss, color='red')
     plt.xlabel("Epochs")
     plt.ylabel("Loss")
     plt.title("Loss plot for generator")
-    plt.savefig("generator_loss_plot.pdf")
+    plt.savefig(OUTPUT_NAME + "_generator_loss_plot.pdf")
 
     return generator, adversary, gan
 
@@ -213,7 +216,7 @@ def runGAN(generator, outfile):
     img = generator.predict(noise)[0]  # run generator on noise
     img = np.squeeze(img)  # readjust image shape if needed
     img = (0.5 * img + 0.5) * 255  # adjust values to range from 0 to 255 as needed
-    imwrite(outfile, img)  # store resulting image
+    imsave(outfile, img)  # store resulting image
 
 
 ################################### RUNNING THE PIPELINE #############################
@@ -222,11 +225,8 @@ def main():
     if len(sys.argv) != 3:
         print('Usage: python Lab4.py <discriminator_ratio> <generator_ratio>')
         exit(0)
-    # discriminator_ratio = int(sys.argv[1])
-    # generator_ratio = int(sys.argv[2])
-
-    discriminator_ratio = 1
-    generator_ratio = 1
+    discriminator_ratio = int(sys.argv[1])
+    generator_ratio = int(sys.argv[2])
 
     print("Starting %s image generator program." % LABEL)
     # Make output directory
